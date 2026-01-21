@@ -1,10 +1,10 @@
 use crate::guild::types::{Guild, Member, Role};
-use soroban_sdk::{Address, Env, Map, String, Symbol};
+use soroban_sdk::{symbol_short, Address, Env, Map, Symbol, Vec};
 
 // Storage keys as symbols for efficient lookup
-const GUILDS_KEY: Symbol = Symbol::short("guilds");
-const MEMBERS_KEY: Symbol = Symbol::short("members");
-const GUILD_COUNTER_KEY: Symbol = Symbol::short("guild_cnt");
+const GUILDS_KEY: Symbol = symbol_short!("guilds");
+const MEMBERS_KEY: Symbol = symbol_short!("members");
+const GUILD_COUNTER_KEY: Symbol = symbol_short!("guild_cnt");
 
 /// Initialize storage for guilds and members
 /// This should be called during contract initialization
@@ -28,7 +28,6 @@ pub fn get_next_guild_id(env: &Env) -> u64 {
         .storage()
         .persistent()
         .get(&GUILD_COUNTER_KEY)
-        .unwrap_or(Ok(0u64))
         .unwrap_or(0u64);
 
     let next_id = counter + 1;
@@ -45,8 +44,7 @@ pub fn store_guild(env: &Env, guild: &Guild) {
         .storage()
         .persistent()
         .get(&GUILDS_KEY)
-        .unwrap_or(Ok(Map::new(env)))
-        .unwrap_or_else(|_| Map::new(env));
+        .unwrap_or_else(|| Map::new(env));
 
     guilds.set(guild.id, guild.clone());
     env.storage().persistent().set(&GUILDS_KEY, &guilds);
@@ -58,10 +56,9 @@ pub fn get_guild(env: &Env, guild_id: u64) -> Option<Guild> {
         .storage()
         .persistent()
         .get(&GUILDS_KEY)
-        .unwrap_or(Ok(Map::new(env)))
-        .unwrap_or_else(|_| Map::new(env));
+        .unwrap_or_else(|| Map::new(env));
 
-    guilds.get(guild_id).ok()
+    guilds.get(guild_id)
 }
 
 /// Store a member in a guild
@@ -70,12 +67,10 @@ pub fn store_member(env: &Env, guild_id: u64, member: &Member) {
         .storage()
         .persistent()
         .get(&MEMBERS_KEY)
-        .unwrap_or(Ok(Map::new(env)))
-        .unwrap_or_else(|_| Map::new(env));
+        .unwrap_or_else(|| Map::new(env));
 
     let mut guild_members = members_map
         .get(guild_id)
-        .ok()
         .unwrap_or_else(|| Map::new(env));
 
     guild_members.set(member.address.clone(), member.clone());
@@ -92,11 +87,10 @@ pub fn get_member(env: &Env, guild_id: u64, address: &Address) -> Option<Member>
         .storage()
         .persistent()
         .get(&MEMBERS_KEY)
-        .unwrap_or(Ok(Map::new(env)))
-        .unwrap_or_else(|_| Map::new(env));
+        .unwrap_or_else(|| Map::new(env));
 
-    let guild_members = members_map.get(guild_id).ok()?;
-    guild_members.get(address.clone()).ok()
+    let guild_members = members_map.get(guild_id)?;
+    guild_members.get(address.clone())
 }
 
 /// Remove a member from a guild
@@ -105,12 +99,11 @@ pub fn remove_member(env: &Env, guild_id: u64, address: &Address) -> bool {
         .storage()
         .persistent()
         .get(&MEMBERS_KEY)
-        .unwrap_or(Ok(Map::new(env)))
-        .unwrap_or_else(|_| Map::new(env));
+        .unwrap_or_else(|| Map::new(env));
 
-    if let Ok(mut guild_members) = members_map.get(guild_id) {
+    if let Some(mut guild_members) = members_map.get(guild_id) {
         // Remove the member
-        let had_member = guild_members.contains_key(address);
+        let had_member = guild_members.contains_key(address.clone());
         if had_member {
             guild_members.remove(address.clone());
             members_map.set(guild_id, guild_members);
@@ -130,21 +123,14 @@ pub fn get_all_members(env: &Env, guild_id: u64) -> Vec<Member> {
         .storage()
         .persistent()
         .get(&MEMBERS_KEY)
-        .unwrap_or(Ok(Map::new(env)))
-        .unwrap_or_else(|_| Map::new(env));
+        .unwrap_or_else(|| Map::new(env));
 
-    if let Ok(guild_members) = members_map.get(guild_id) {
+    if let Some(guild_members) = members_map.get(guild_id) {
         let mut result = Vec::new(env);
         
-        // Iterate through all members in the guild
-        let mut i = 0;
-        let len = guild_members.len();
-        
-        while i < len {
-            if let Ok((_, member)) = guild_members.get_unchecked(i) {
-                result.push_back(member);
-            }
-            i += 1;
+        // Iterate through all members in the guild using iter()
+        for (_, member) in guild_members.iter() {
+            result.push_back(member);
         }
         
         result
@@ -164,8 +150,7 @@ pub fn update_guild(env: &Env, guild: &Guild) {
         .storage()
         .persistent()
         .get(&GUILDS_KEY)
-        .unwrap_or(Ok(Map::new(env)))
-        .unwrap_or_else(|_| Map::new(env));
+        .unwrap_or_else(|| Map::new(env));
 
     guilds.set(guild.id, guild.clone());
     env.storage().persistent().set(&GUILDS_KEY, &guilds);
@@ -176,14 +161,11 @@ pub fn count_owners(env: &Env, guild_id: u64) -> u32 {
     let members = get_all_members(env, guild_id);
     let mut count = 0u32;
     
-    let mut i = 0;
-    while i < members.len() {
-        if let Ok(member) = members.get(i) {
-            if member.role == Role::Owner {
-                count += 1;
-            }
+    for i in 0..members.len() {
+        let member = members.get_unchecked(i);
+        if member.role == Role::Owner {
+            count += 1;
         }
-        i += 1;
     }
     
     count

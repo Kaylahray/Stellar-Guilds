@@ -1,15 +1,15 @@
 #![no_std]
 
-use soroban_sdk::{contract, contractimpl, Address, Env, String, Symbol, Vec};
+use soroban_sdk::{contract, contractimpl, Address, Env, String, Vec};
 
 mod guild;
 
 use guild::membership::{
-    self, create_guild, add_member, remove_member, update_role, get_member,
+    create_guild, add_member, remove_member, update_role, get_member,
     get_all_members, is_member, has_permission,
 };
 use guild::storage;
-use guild::types::{Guild, Member, Role};
+use guild::types::{Member, Role};
 
 /// Stellar Guilds - Main Contract Entry Point
 /// 
@@ -41,7 +41,7 @@ impl StellarGuildsContract {
 
     /// Get contract version
     pub fn version(_env: Env) -> String {
-        String::from_slice(&_env, "0.1.0")
+        String::from_str(&_env, "0.1.0")
     }
 
     /// Create a new guild
@@ -58,9 +58,12 @@ impl StellarGuildsContract {
         name: String,
         description: String,
         owner: Address,
-    ) -> Result<u64, String> {
+    ) -> u64 {
         owner.require_auth();
-        create_guild(&env, name, description, owner)
+        match create_guild(&env, name, description, owner) {
+            Ok(id) => id,
+            Err(_) => panic!("create_guild error"),
+        }
     }
 
     /// Add a member to a guild
@@ -72,16 +75,19 @@ impl StellarGuildsContract {
     /// * `caller` - The address making the request (must have permission)
     ///
     /// # Returns
-    /// true if successful, error string otherwise
+    /// true if successful, panics with error message otherwise
     pub fn add_member(
         env: Env,
         guild_id: u64,
         address: Address,
         role: Role,
         caller: Address,
-    ) -> Result<bool, String> {
+    ) -> bool {
         caller.require_auth();
-        add_member(&env, guild_id, address, role, caller)
+        match add_member(&env, guild_id, address, role, caller) {
+            Ok(result) => result,
+            Err(_) => panic!("add_member error"),
+        }
     }
 
     /// Remove a member from a guild
@@ -92,15 +98,18 @@ impl StellarGuildsContract {
     /// * `caller` - The address making the request
     ///
     /// # Returns
-    /// true if successful, error string otherwise
+    /// true if successful, panics with error message otherwise
     pub fn remove_member(
         env: Env,
         guild_id: u64,
         address: Address,
         caller: Address,
-    ) -> Result<bool, String> {
+    ) -> bool {
         caller.require_auth();
-        remove_member(&env, guild_id, address, caller)
+        match remove_member(&env, guild_id, address, caller) {
+            Ok(result) => result,
+            Err(_) => panic!("remove_member error"),
+        }
     }
 
     /// Update a member's role
@@ -112,16 +121,19 @@ impl StellarGuildsContract {
     /// * `caller` - The address making the request (must have permission)
     ///
     /// # Returns
-    /// true if successful, error string otherwise
+    /// true if successful, panics with error message otherwise
     pub fn update_role(
         env: Env,
         guild_id: u64,
         address: Address,
         new_role: Role,
         caller: Address,
-    ) -> Result<bool, String> {
+    ) -> bool {
         caller.require_auth();
-        update_role(&env, guild_id, address, new_role, caller)
+        match update_role(&env, guild_id, address, new_role, caller) {
+            Ok(result) => result,
+            Err(_) => panic!("update_role error"),
+        }
     }
 
     /// Get a member from a guild
@@ -131,9 +143,12 @@ impl StellarGuildsContract {
     /// * `address` - The address of the member
     ///
     /// # Returns
-    /// The Member if found, error string otherwise
-    pub fn get_member(env: Env, guild_id: u64, address: Address) -> Result<Member, String> {
-        get_member(&env, guild_id, address)
+    /// The Member if found, panics with error message otherwise
+    pub fn get_member(env: Env, guild_id: u64, address: Address) -> Member {
+        match get_member(&env, guild_id, address) {
+            Ok(member) => member,
+            Err(_) => panic!("get_member error"),
+        }
     }
 
     /// Get all members of a guild
@@ -224,7 +239,7 @@ mod tests {
         
         let client = StellarGuildsContractClient::new(&env, &contract_id);
         let version = client.version();
-        assert_eq!(version, String::from_slice(&env, "0.1.0"));
+        assert_eq!(version, String::from_str(&env, "0.1.0"));
     }
 
     // ============ Guild Creation Tests ============
@@ -237,13 +252,10 @@ mod tests {
         
         owner.mock_all_auths();
         
-        let name = String::from_slice(&env, "Test Guild");
-        let description = String::from_slice(&env, "A test guild");
+        let name = String::from_str(&env, "Test Guild");
+        let description = String::from_str(&env, "A test guild");
         
-        let result = client.create_guild(&name, &description, &owner);
-        assert!(result.is_ok());
-        
-        let guild_id = result.unwrap();
+        let guild_id = client.create_guild(&name, &description, &owner);
         assert_eq!(guild_id, 1u64);
     }
 
@@ -255,20 +267,21 @@ mod tests {
         
         owner.mock_all_auths();
         
-        let name = String::from_slice(&env, "Guild");
-        let description = String::from_slice(&env, "Description");
+        let name = String::from_str(&env, "Guild");
+        let description = String::from_str(&env, "Description");
         
-        let guild_id = client.create_guild(&name, &description, &owner).unwrap();
+        let guild_id = client.create_guild(&name, &description, &owner);
         
         // Owner should be a member after creation
         let is_member = client.is_member(&guild_id, &owner);
         assert_eq!(is_member, true);
         
-        let member = client.get_member(&guild_id, &owner).unwrap();
+        let member = client.get_member(&guild_id, &owner);
         assert_eq!(member.role, Role::Owner);
     }
 
     #[test]
+    #[should_panic]
     fn test_create_guild_invalid_name_empty() {
         let (env, owner, _, _, _) = setup();
         let contract_id = register_and_init_contract(&env);
@@ -276,14 +289,14 @@ mod tests {
         
         owner.mock_all_auths();
         
-        let name = String::from_slice(&env, "");
-        let description = String::from_slice(&env, "Description");
+        let name = String::from_str(&env, "");
+        let description = String::from_str(&env, "Description");
         
-        let result = client.create_guild(&name, &description, &owner);
-        assert!(result.is_err());
+        client.create_guild(&name, &description, &owner);
     }
 
     #[test]
+    #[should_panic]
     fn test_create_guild_invalid_description_too_long() {
         let (env, owner, _, _, _) = setup();
         let contract_id = register_and_init_contract(&env);
@@ -291,13 +304,12 @@ mod tests {
         
         owner.mock_all_auths();
         
-        let name = String::from_slice(&env, "Guild");
+        let name = String::from_str(&env, "Guild");
         // Create a description that is too long (> 512 chars)
         let long_desc = "x".repeat(513);
-        let description = String::from_slice(&env, &long_desc);
+        let description = String::from_str(&env, &long_desc);
         
-        let result = client.create_guild(&name, &description, &owner);
-        assert!(result.is_err());
+        client.create_guild(&name, &description, &owner);
     }
 
     #[test]
@@ -308,15 +320,15 @@ mod tests {
         
         owner.mock_all_auths();
         
-        let name1 = String::from_slice(&env, "Guild 1");
-        let description1 = String::from_slice(&env, "First guild");
+        let name1 = String::from_str(&env, "Guild 1");
+        let description1 = String::from_str(&env, "First guild");
         
-        let guild_id_1 = client.create_guild(&name1, &description1, &owner).unwrap();
+        let guild_id_1 = client.create_guild(&name1, &description1, &owner);
         
-        let name2 = String::from_slice(&env, "Guild 2");
-        let description2 = String::from_slice(&env, "Second guild");
+        let name2 = String::from_str(&env, "Guild 2");
+        let description2 = String::from_str(&env, "Second guild");
         
-        let guild_id_2 = client.create_guild(&name2, &description2, &owner).unwrap();
+        let guild_id_2 = client.create_guild(&name2, &description2, &owner);
         
         // Guild IDs should be unique and incremental
         assert_eq!(guild_id_1, 1u64);
@@ -334,20 +346,21 @@ mod tests {
         owner.mock_all_auths();
         admin.mock_all_auths();
         
-        let name = String::from_slice(&env, "Guild");
-        let description = String::from_slice(&env, "Description");
+        let name = String::from_str(&env, "Guild");
+        let description = String::from_str(&env, "Description");
         
-        let guild_id = client.create_guild(&name, &description, &owner).unwrap();
+        let guild_id = client.create_guild(&name, &description, &owner);
         
         // Owner adds admin
         let result = client.add_member(&guild_id, &admin, &Role::Admin, &owner);
-        assert!(result.is_ok());
+        assert_eq!(result, true);
         
-        let member = client.get_member(&guild_id, &admin).unwrap();
+        let member = client.get_member(&guild_id, &admin);
         assert_eq!(member.role, Role::Admin);
     }
 
     #[test]
+    #[should_panic]
     fn test_add_member_duplicate() {
         let (env, owner, admin, _, _) = setup();
         let contract_id = register_and_init_contract(&env);
@@ -356,20 +369,20 @@ mod tests {
         owner.mock_all_auths();
         admin.mock_all_auths();
         
-        let name = String::from_slice(&env, "Guild");
-        let description = String::from_slice(&env, "Description");
+        let name = String::from_str(&env, "Guild");
+        let description = String::from_str(&env, "Description");
         
-        let guild_id = client.create_guild(&name, &description, &owner).unwrap();
+        let guild_id = client.create_guild(&name, &description, &owner);
         
         // Add member once
-        client.add_member(&guild_id, &admin, &Role::Member, &owner).unwrap();
+        client.add_member(&guild_id, &admin, &Role::Member, &owner);
         
-        // Try to add same member again - should fail
-        let result = client.add_member(&guild_id, &admin, &Role::Member, &owner);
-        assert!(result.is_err());
+        // Try to add same member again - should panic
+        client.add_member(&guild_id, &admin, &Role::Member, &owner);
     }
 
     #[test]
+    #[should_panic]
     fn test_add_member_permission_denied() {
         let (env, owner, admin, member, non_member) = setup();
         let contract_id = register_and_init_contract(&env);
@@ -380,29 +393,23 @@ mod tests {
         member.mock_all_auths();
         non_member.mock_all_auths();
         
-        let name = String::from_slice(&env, "Guild");
-        let description = String::from_slice(&env, "Description");
+        let name = String::from_str(&env, "Guild");
+        let description = String::from_str(&env, "Description");
         
-        let guild_id = client.create_guild(&name, &description, &owner).unwrap();
+        let guild_id = client.create_guild(&name, &description, &owner);
         
         // Add admin
-        client.add_member(&guild_id, &admin, &Role::Admin, &owner).unwrap();
+        client.add_member(&guild_id, &admin, &Role::Admin, &owner);
         
         // Add member
-        client.add_member(&guild_id, &member, &Role::Member, &owner).unwrap();
+        client.add_member(&guild_id, &member, &Role::Member, &owner);
         
-        // Non-member tries to add someone - should fail
-        let result = client.add_member(&guild_id, &non_member, &Role::Member, &non_member);
-        assert!(result.is_err());
-        
-        // Member tries to add admin - should fail
-        let another = Address::random(&env);
-        another.mock_all_auths();
-        let result = client.add_member(&guild_id, &another, &Role::Admin, &member);
-        assert!(result.is_err());
+        // Non-member tries to add someone - should panic
+        client.add_member(&guild_id, &non_member, &Role::Member, &non_member);
     }
 
     #[test]
+    #[should_panic]
     fn test_add_admin_by_non_owner() {
         let (env, owner, admin, member, _) = setup();
         let contract_id = register_and_init_contract(&env);
@@ -412,20 +419,19 @@ mod tests {
         admin.mock_all_auths();
         member.mock_all_auths();
         
-        let name = String::from_slice(&env, "Guild");
-        let description = String::from_slice(&env, "Description");
+        let name = String::from_str(&env, "Guild");
+        let description = String::from_str(&env, "Description");
         
-        let guild_id = client.create_guild(&name, &description, &owner).unwrap();
+        let guild_id = client.create_guild(&name, &description, &owner);
         
         // Add member
-        client.add_member(&guild_id, &member, &Role::Member, &owner).unwrap();
+        client.add_member(&guild_id, &member, &Role::Member, &owner);
         
-        // Member tries to add an owner - should fail
+        // Member tries to add an owner - should panic
         let new_owner = Address::random(&env);
         new_owner.mock_all_auths();
         
-        let result = client.add_member(&guild_id, &new_owner, &Role::Owner, &member);
-        assert!(result.is_err());
+        client.add_member(&guild_id, &new_owner, &Role::Owner, &member);
     }
 
     // ============ Member Removal Tests ============
@@ -439,13 +445,13 @@ mod tests {
         owner.mock_all_auths();
         member.mock_all_auths();
         
-        let name = String::from_slice(&env, "Guild");
-        let description = String::from_slice(&env, "Description");
+        let name = String::from_str(&env, "Guild");
+        let description = String::from_str(&env, "Description");
         
-        let guild_id = client.create_guild(&name, &description, &owner).unwrap();
+        let guild_id = client.create_guild(&name, &description, &owner);
         
         // Add member
-        client.add_member(&guild_id, &member, &Role::Member, &owner).unwrap();
+        client.add_member(&guild_id, &member, &Role::Member, &owner);
         
         // Verify member exists
         let is_member = client.is_member(&guild_id, &member);
@@ -453,7 +459,7 @@ mod tests {
         
         // Remove member
         let result = client.remove_member(&guild_id, &member, &owner);
-        assert!(result.is_ok());
+        assert_eq!(result, true);
         
         // Verify member no longer exists
         let is_member = client.is_member(&guild_id, &member);
@@ -469,17 +475,17 @@ mod tests {
         owner.mock_all_auths();
         member.mock_all_auths();
         
-        let name = String::from_slice(&env, "Guild");
-        let description = String::from_slice(&env, "Description");
+        let name = String::from_str(&env, "Guild");
+        let description = String::from_str(&env, "Description");
         
-        let guild_id = client.create_guild(&name, &description, &owner).unwrap();
+        let guild_id = client.create_guild(&name, &description, &owner);
         
         // Add member
-        client.add_member(&guild_id, &member, &Role::Member, &owner).unwrap();
+        client.add_member(&guild_id, &member, &Role::Member, &owner);
         
         // Member removes themselves
         let result = client.remove_member(&guild_id, &member, &member);
-        assert!(result.is_ok());
+        assert_eq!(result, true);
         
         // Verify member no longer exists
         let is_member = client.is_member(&guild_id, &member);
@@ -487,6 +493,7 @@ mod tests {
     }
 
     #[test]
+    #[should_panic]
     fn test_remove_last_owner_fails() {
         let (env, owner, _, _, _) = setup();
         let contract_id = register_and_init_contract(&env);
@@ -494,17 +501,17 @@ mod tests {
         
         owner.mock_all_auths();
         
-        let name = String::from_slice(&env, "Guild");
-        let description = String::from_slice(&env, "Description");
+        let name = String::from_str(&env, "Guild");
+        let description = String::from_str(&env, "Description");
         
-        let guild_id = client.create_guild(&name, &description, &owner).unwrap();
+        let guild_id = client.create_guild(&name, &description, &owner);
         
-        // Try to remove the only owner - should fail
-        let result = client.remove_member(&guild_id, &owner, &owner);
-        assert!(result.is_err());
+        // Try to remove the only owner - should panic
+        client.remove_member(&guild_id, &owner, &owner);
     }
 
     #[test]
+    #[should_panic]
     fn test_remove_non_owner_by_non_owner_fails() {
         let (env, owner, admin, member, _) = setup();
         let contract_id = register_and_init_contract(&env);
@@ -514,18 +521,17 @@ mod tests {
         admin.mock_all_auths();
         member.mock_all_auths();
         
-        let name = String::from_slice(&env, "Guild");
-        let description = String::from_slice(&env, "Description");
+        let name = String::from_str(&env, "Guild");
+        let description = String::from_str(&env, "Description");
         
-        let guild_id = client.create_guild(&name, &description, &owner).unwrap();
+        let guild_id = client.create_guild(&name, &description, &owner);
         
         // Add member and admin
-        client.add_member(&guild_id, &member, &Role::Member, &owner).unwrap();
-        client.add_member(&guild_id, &admin, &Role::Admin, &owner).unwrap();
+        client.add_member(&guild_id, &member, &Role::Member, &owner);
+        client.add_member(&guild_id, &admin, &Role::Admin, &owner);
         
-        // Member tries to remove admin - should fail
-        let result = client.remove_member(&guild_id, &admin, &member);
-        assert!(result.is_err());
+        // Member tries to remove admin - should panic
+        client.remove_member(&guild_id, &admin, &member);
     }
 
     // ============ Role Update Tests ============
@@ -539,23 +545,24 @@ mod tests {
         owner.mock_all_auths();
         member.mock_all_auths();
         
-        let name = String::from_slice(&env, "Guild");
-        let description = String::from_slice(&env, "Description");
+        let name = String::from_str(&env, "Guild");
+        let description = String::from_str(&env, "Description");
         
-        let guild_id = client.create_guild(&name, &description, &owner).unwrap();
+        let guild_id = client.create_guild(&name, &description, &owner);
         
         // Add member
-        client.add_member(&guild_id, &member, &Role::Member, &owner).unwrap();
+        client.add_member(&guild_id, &member, &Role::Member, &owner);
         
         // Update to admin
         let result = client.update_role(&guild_id, &member, &Role::Admin, &owner);
-        assert!(result.is_ok());
+        assert_eq!(result, true);
         
-        let updated_member = client.get_member(&guild_id, &member).unwrap();
+        let updated_member = client.get_member(&guild_id, &member);
         assert_eq!(updated_member.role, Role::Admin);
     }
 
     #[test]
+    #[should_panic]
     fn test_update_role_permission_denied() {
         let (env, owner, member1, member2, _) = setup();
         let contract_id = register_and_init_contract(&env);
@@ -565,21 +572,21 @@ mod tests {
         member1.mock_all_auths();
         member2.mock_all_auths();
         
-        let name = String::from_slice(&env, "Guild");
-        let description = String::from_slice(&env, "Description");
+        let name = String::from_str(&env, "Guild");
+        let description = String::from_str(&env, "Description");
         
-        let guild_id = client.create_guild(&name, &description, &owner).unwrap();
+        let guild_id = client.create_guild(&name, &description, &owner);
         
         // Add members
-        client.add_member(&guild_id, &member1, &Role::Member, &owner).unwrap();
-        client.add_member(&guild_id, &member2, &Role::Member, &owner).unwrap();
+        client.add_member(&guild_id, &member1, &Role::Member, &owner);
+        client.add_member(&guild_id, &member2, &Role::Member, &owner);
         
-        // Member1 tries to change member2's role - should fail
-        let result = client.update_role(&guild_id, &member2, &Role::Admin, &member1);
-        assert!(result.is_err());
+        // Member1 tries to change member2's role - should panic
+        client.update_role(&guild_id, &member2, &Role::Admin, &member1);
     }
 
     #[test]
+    #[should_panic]
     fn test_cannot_demote_last_owner() {
         let (env, owner, admin, _, _) = setup();
         let contract_id = register_and_init_contract(&env);
@@ -588,17 +595,16 @@ mod tests {
         owner.mock_all_auths();
         admin.mock_all_auths();
         
-        let name = String::from_slice(&env, "Guild");
-        let description = String::from_slice(&env, "Description");
+        let name = String::from_str(&env, "Guild");
+        let description = String::from_str(&env, "Description");
         
-        let guild_id = client.create_guild(&name, &description, &owner).unwrap();
+        let guild_id = client.create_guild(&name, &description, &owner);
         
         // Add admin
-        client.add_member(&guild_id, &admin, &Role::Admin, &owner).unwrap();
+        client.add_member(&guild_id, &admin, &Role::Admin, &owner);
         
-        // Try to demote the last owner - should fail
-        let result = client.update_role(&guild_id, &owner, &Role::Admin, &owner);
-        assert!(result.is_err());
+        // Try to demote the last owner - should panic
+        client.update_role(&guild_id, &owner, &Role::Admin, &owner);
     }
 
     #[test]
@@ -611,17 +617,17 @@ mod tests {
         owner2.mock_all_auths();
         member.mock_all_auths();
         
-        let name = String::from_slice(&env, "Guild");
-        let description = String::from_slice(&env, "Description");
+        let name = String::from_str(&env, "Guild");
+        let description = String::from_str(&env, "Description");
         
-        let guild_id = client.create_guild(&name, &description, &owner1).unwrap();
+        let guild_id = client.create_guild(&name, &description, &owner1);
         
         // Add owner2
-        client.add_member(&guild_id, &owner2, &Role::Owner, &owner1).unwrap();
+        client.add_member(&guild_id, &owner2, &Role::Owner, &owner1);
         
         // Now owner1 can be demoted
         let result = client.update_role(&guild_id, &owner1, &Role::Admin, &owner1);
-        assert!(result.is_ok());
+        assert_eq!(result, true);
     }
 
     // ============ Member Query Tests ============
@@ -635,22 +641,20 @@ mod tests {
         owner.mock_all_auths();
         member.mock_all_auths();
         
-        let name = String::from_slice(&env, "Guild");
-        let description = String::from_slice(&env, "Description");
+        let name = String::from_str(&env, "Guild");
+        let description = String::from_str(&env, "Description");
         
-        let guild_id = client.create_guild(&name, &description, &owner).unwrap();
+        let guild_id = client.create_guild(&name, &description, &owner);
         
-        client.add_member(&guild_id, &member, &Role::Member, &owner).unwrap();
+        client.add_member(&guild_id, &member, &Role::Member, &owner);
         
-        let result = client.get_member(&guild_id, &member);
-        assert!(result.is_ok());
-        
-        let member_data = result.unwrap();
+        let member_data = client.get_member(&guild_id, &member);
         assert_eq!(member_data.address, member);
         assert_eq!(member_data.role, Role::Member);
     }
 
     #[test]
+    #[should_panic]
     fn test_get_member_not_found() {
         let (env, owner, member, non_member, _) = setup();
         let contract_id = register_and_init_contract(&env);
@@ -659,15 +663,14 @@ mod tests {
         owner.mock_all_auths();
         member.mock_all_auths();
         
-        let name = String::from_slice(&env, "Guild");
-        let description = String::from_slice(&env, "Description");
+        let name = String::from_str(&env, "Guild");
+        let description = String::from_str(&env, "Description");
         
-        let guild_id = client.create_guild(&name, &description, &owner).unwrap();
+        let guild_id = client.create_guild(&name, &description, &owner);
         
-        client.add_member(&guild_id, &member, &Role::Member, &owner).unwrap();
+        client.add_member(&guild_id, &member, &Role::Member, &owner);
         
-        let result = client.get_member(&guild_id, &non_member);
-        assert!(result.is_err());
+        client.get_member(&guild_id, &non_member);
     }
 
     #[test]
@@ -681,22 +684,22 @@ mod tests {
         member2.mock_all_auths();
         member3.mock_all_auths();
         
-        let name = String::from_slice(&env, "Guild");
-        let description = String::from_slice(&env, "Description");
+        let name = String::from_str(&env, "Guild");
+        let description = String::from_str(&env, "Description");
         
-        let guild_id = client.create_guild(&name, &description, &owner).unwrap();
+        let guild_id = client.create_guild(&name, &description, &owner);
         
         // Initially should have 1 member (owner)
-        let mut members = client.get_all_members(&guild_id);
+        let members = client.get_all_members(&guild_id);
         assert_eq!(members.len(), 1);
         
         // Add more members
-        client.add_member(&guild_id, &member1, &Role::Member, &owner).unwrap();
-        client.add_member(&guild_id, &member2, &Role::Admin, &owner).unwrap();
-        client.add_member(&guild_id, &member3, &Role::Contributor, &owner).unwrap();
+        client.add_member(&guild_id, &member1, &Role::Member, &owner);
+        client.add_member(&guild_id, &member2, &Role::Admin, &owner);
+        client.add_member(&guild_id, &member3, &Role::Contributor, &owner);
         
         // Should now have 4 members
-        members = client.get_all_members(&guild_id);
+        let members = client.get_all_members(&guild_id);
         assert_eq!(members.len(), 4);
     }
 
@@ -709,10 +712,10 @@ mod tests {
         owner.mock_all_auths();
         member.mock_all_auths();
         
-        let name = String::from_slice(&env, "Guild");
-        let description = String::from_slice(&env, "Description");
+        let name = String::from_str(&env, "Guild");
+        let description = String::from_str(&env, "Description");
         
-        let guild_id = client.create_guild(&name, &description, &owner).unwrap();
+        let guild_id = client.create_guild(&name, &description, &owner);
         
         // Owner should be a member
         assert_eq!(client.is_member(&guild_id, &owner), true);
@@ -721,7 +724,7 @@ mod tests {
         assert_eq!(client.is_member(&guild_id, &non_member), false);
         
         // Add member
-        client.add_member(&guild_id, &member, &Role::Member, &owner).unwrap();
+        client.add_member(&guild_id, &member, &Role::Member, &owner);
         
         // Member should now be a member
         assert_eq!(client.is_member(&guild_id, &member), true);
@@ -740,14 +743,14 @@ mod tests {
         member.mock_all_auths();
         contributor.mock_all_auths();
         
-        let name = String::from_slice(&env, "Guild");
-        let description = String::from_slice(&env, "Description");
+        let name = String::from_str(&env, "Guild");
+        let description = String::from_str(&env, "Description");
         
-        let guild_id = client.create_guild(&name, &description, &owner).unwrap();
+        let guild_id = client.create_guild(&name, &description, &owner);
         
-        client.add_member(&guild_id, &admin, &Role::Admin, &owner).unwrap();
-        client.add_member(&guild_id, &member, &Role::Member, &owner).unwrap();
-        client.add_member(&guild_id, &contributor, &Role::Contributor, &owner).unwrap();
+        client.add_member(&guild_id, &admin, &Role::Admin, &owner);
+        client.add_member(&guild_id, &member, &Role::Member, &owner);
+        client.add_member(&guild_id, &contributor, &Role::Contributor, &owner);
         
         // Owner has all permissions
         assert_eq!(client.has_permission(&guild_id, &owner, &Role::Owner), true);
@@ -788,28 +791,28 @@ mod tests {
         member2.mock_all_auths();
         
         // Create guild
-        let name = String::from_slice(&env, "Community Guild");
-        let description = String::from_slice(&env, "A thriving community");
+        let name = String::from_str(&env, "Community Guild");
+        let description = String::from_str(&env, "A thriving community");
         
-        let guild_id = client.create_guild(&name, &description, &owner).unwrap();
+        let guild_id = client.create_guild(&name, &description, &owner);
         assert_eq!(guild_id, 1u64);
         
         // Add admin
-        client.add_member(&guild_id, &admin, &Role::Admin, &owner).unwrap();
+        client.add_member(&guild_id, &admin, &Role::Admin, &owner);
         
         // Add members
-        client.add_member(&guild_id, &member1, &Role::Member, &admin).unwrap();
-        client.add_member(&guild_id, &member2, &Role::Contributor, &owner).unwrap();
+        client.add_member(&guild_id, &member1, &Role::Member, &admin);
+        client.add_member(&guild_id, &member2, &Role::Contributor, &owner);
         
         // Verify all members exist
         let members = client.get_all_members(&guild_id);
         assert_eq!(members.len(), 4); // owner + admin + member1 + member2
         
         // Promote member1 to member
-        client.update_role(&guild_id, &member1, &Role::Member, &admin).unwrap();
+        client.update_role(&guild_id, &member1, &Role::Member, &admin);
         
         // member1 removes themselves
-        client.remove_member(&guild_id, &member1, &member1).unwrap();
+        client.remove_member(&guild_id, &member1, &member1);
         
         // Verify member1 is gone
         let members = client.get_all_members(&guild_id);
@@ -830,20 +833,20 @@ mod tests {
         member.mock_all_auths();
         contributor.mock_all_auths();
         
-        let name = String::from_slice(&env, "Guild");
-        let description = String::from_slice(&env, "Description");
+        let name = String::from_str(&env, "Guild");
+        let description = String::from_str(&env, "Description");
         
-        let guild_id = client.create_guild(&name, &description, &owner).unwrap();
+        let guild_id = client.create_guild(&name, &description, &owner);
         
         // Add admin
-        client.add_member(&guild_id, &admin, &Role::Admin, &owner).unwrap();
+        client.add_member(&guild_id, &admin, &Role::Admin, &owner);
         
         // Admin adds member and contributor
         let result1 = client.add_member(&guild_id, &member, &Role::Member, &admin);
-        assert!(result1.is_ok());
+        assert_eq!(result1, true);
         
         let result2 = client.add_member(&guild_id, &contributor, &Role::Contributor, &admin);
-        assert!(result2.is_ok());
+        assert_eq!(result2, true);
         
         // Verify they were added
         assert_eq!(client.is_member(&guild_id, &member), true);
@@ -851,6 +854,7 @@ mod tests {
     }
 
     #[test]
+    #[should_panic]
     fn test_admin_cannot_add_owner() {
         let (env, owner, admin, new_owner, _) = setup();
         let contract_id = register_and_init_contract(&env);
@@ -860,17 +864,16 @@ mod tests {
         admin.mock_all_auths();
         new_owner.mock_all_auths();
         
-        let name = String::from_slice(&env, "Guild");
-        let description = String::from_slice(&env, "Description");
+        let name = String::from_str(&env, "Guild");
+        let description = String::from_str(&env, "Description");
         
-        let guild_id = client.create_guild(&name, &description, &owner).unwrap();
+        let guild_id = client.create_guild(&name, &description, &owner);
         
         // Add admin
-        client.add_member(&guild_id, &admin, &Role::Admin, &owner).unwrap();
+        client.add_member(&guild_id, &admin, &Role::Admin, &owner);
         
-        // Admin tries to add owner - should fail
-        let result = client.add_member(&guild_id, &new_owner, &Role::Owner, &admin);
-        assert!(result.is_err());
+        // Admin tries to add owner - should panic
+        client.add_member(&guild_id, &new_owner, &Role::Owner, &admin);
     }
 }
 

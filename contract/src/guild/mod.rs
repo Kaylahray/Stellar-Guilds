@@ -11,9 +11,3 @@
 pub mod types;
 pub mod storage;
 pub mod membership;
-
-pub use membership::{
-    create_guild, add_member, remove_member, update_role,
-    get_member, get_all_members, is_member, has_permission,
-};
-pub use types::{Guild, Member, Role};

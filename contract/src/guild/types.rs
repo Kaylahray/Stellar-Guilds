@@ -1,4 +1,4 @@
-use soroban_sdk::{contracttype, Address, Env};
+use soroban_sdk::{contracttype, Address};
 
 /// Role enum for guild members
 /// - Owner: Full control over the guild
@@ -6,7 +6,7 @@ use soroban_sdk::{contracttype, Address, Env};
 /// - Member: Can participate in guild activities
 /// - Contributor: Limited access, read-only in most cases
 #[contracttype]
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Role {
     Owner = 0,
     Admin = 1,
