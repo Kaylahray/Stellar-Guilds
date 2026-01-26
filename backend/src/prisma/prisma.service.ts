@@ -1,64 +1,75 @@
-import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
-// We'll import the actual PrismaClient when the database is connected
-// For now, we'll create a temporary service that can be extended once types are available
+import { Injectable, OnModuleInit, OnModuleDestroy, Logger } from '@nestjs/common';
+import { PrismaClient } from '@prisma/client';
 
 @Injectable()
 export class PrismaService implements OnModuleInit, OnModuleDestroy {
-  private client: any;
+  private readonly logger = new Logger(PrismaService.name);
+  private prisma: PrismaClient;
 
   constructor() {
-    // Dynamically import PrismaClient to handle type issues
-    const { PrismaClient } = require('@prisma/client');
-    this.client = new PrismaClient();
+    try {
+      // Create PrismaClient with minimal options
+      const options: any = {};
+      this.prisma = new PrismaClient(options);
+    } catch (error) {
+      this.logger.error(`Failed to create PrismaClient: ${error}`);
+      throw error;
+    }
   }
 
   async onModuleInit() {
     try {
-      await this.client.$connect();
+      await this.prisma.$connect();
+      this.logger.log('✅ Database connected successfully');
     } catch (error) {
-      console.error('Database connection failed:', error);
-      // In production, you might want to handle this differently
+      this.logger.warn(`⚠️ Database connection failed (will retry): ${error}`);
+      // Continue - database may not be running yet
     }
   }
 
   async onModuleDestroy() {
-    await this.client.$disconnect();
+    try {
+      await this.prisma.$disconnect();
+    } catch (error) {
+      this.logger.warn(`Error disconnecting: ${error}`);
+    }
   }
 
-  // Expose all Prisma client methods
+  // Expose Prisma models
   get user() {
-    return this.client.user;
+    return this.prisma.user;
   }
 
   get guild() {
-    return this.client.guild;
+    return this.prisma.guild;
   }
 
   get guildMembership() {
-    return this.client.guildMembership;
+    return this.prisma.guildMembership;
   }
 
   get bounty() {
-    return this.client.bounty;
+    return this.prisma.bounty;
+  }
+
+  // Expose Prisma utilities
+  get $transaction() {
+    return this.prisma.$transaction.bind(this.prisma);
   }
 
   get $queryRaw() {
-    return this.client.$queryRaw;
+    return this.prisma.$queryRaw.bind(this.prisma);
   }
 
   get $executeRaw() {
-    return this.client.$executeRaw;
+    return this.prisma.$executeRaw.bind(this.prisma);
   }
 
   get $connect() {
-    return this.client.$connect;
+    return this.prisma.$connect.bind(this.prisma);
   }
 
   get $disconnect() {
-    return this.client.$disconnect;
-  }
-
-  get $transaction() {
-    return this.client.$transaction;
+    return this.prisma.$disconnect.bind(this.prisma);
   }
 }
