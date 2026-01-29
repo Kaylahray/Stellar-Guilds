@@ -1,0 +1,143 @@
+import React, { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Menu, X, Sparkles } from "lucide-react";
+import { Button } from "@/components/ui";
+
+export default function Navbar() {
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 50);
+    };
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  const navLinks = [
+    { label: "Features", href: "#features" },
+    { label: "How It Works", href: "#how-it-works" },
+    { label: "Benefits", href: "#benefits" },
+    { label: "Use Cases", href: "#use-cases" },
+  ];
+
+  const scrollToSection = (href: string) => {
+    const element = document.querySelector(href);
+    if (element) {
+      element.scrollIntoView({ behavior: "smooth" });
+    }
+    setIsMobileMenuOpen(false);
+  };
+
+  return (
+    <>
+      <motion.nav
+        initial={{ y: -100 }}
+        animate={{ y: 0 }}
+        transition={{ duration: 0.5 }}
+        className={`
+          fixed top-0 left-0 right-0 z-50 transition-all duration-300
+          ${
+            isScrolled
+              ? "bg-slate-900/80 backdrop-blur-xl border-b border-slate-800/50 shadow-lg shadow-black/20"
+              : "bg-transparent"
+          }
+        `}
+      >
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-20">
+            {/* Logo */}
+            <div className="flex items-center gap-3">
+              <div className="relative">
+                <div className="absolute inset-0 bg-violet-500 blur-lg opacity-50" />
+                <div className="relative w-10 h-10 rounded-xl bg-gradient-to-br from-violet-600 to-violet-800 flex items-center justify-center border border-violet-400/30">
+                  <Sparkles className="w-5 h-5 text-white" />
+                </div>
+              </div>
+              <span className="text-xl font-bold bg-gradient-to-r from-white to-slate-300 bg-clip-text text-transparent">
+                Stellar Guilds
+              </span>
+            </div>
+
+            {/* Desktop Navigation */}
+            <div className="hidden md:flex items-center gap-8">
+              {navLinks.map((link) => (
+                <button
+                  key={link.label}
+                  onClick={() => scrollToSection(link.href)}
+                  className="text-slate-300 hover:text-white transition-colors duration-200 text-sm font-medium"
+                >
+                  {link.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Desktop CTA */}
+            <div className="hidden md:flex items-center gap-4">
+              <Button
+                variant="ghost"
+                className="text-slate-300 hover:text-white hover:bg-white/5"
+              >
+                Sign In
+              </Button>
+              <Button className="bg-gradient-to-r from-violet-600 to-violet-700 hover:from-violet-500 hover:to-violet-600 text-white border-0 shadow-lg shadow-violet-500/25">
+                Get Started
+              </Button>
+            </div>
+
+            {/* Mobile Menu Button */}
+            <button
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className="md:hidden p-2 text-slate-300 hover:text-white transition-colors"
+            >
+              {isMobileMenuOpen ? (
+                <X className="w-6 h-6" />
+              ) : (
+                <Menu className="w-6 h-6" />
+              )}
+            </button>
+          </div>
+        </div>
+      </motion.nav>
+
+      {/* Mobile Menu */}
+      <AnimatePresence>
+        {isMobileMenuOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-x-0 top-20 z-40 md:hidden"
+          >
+            <div className="bg-slate-900/95 backdrop-blur-xl border-b border-slate-800 shadow-2xl">
+              <div className="px-4 py-6 space-y-4">
+                {navLinks.map((link) => (
+                  <button
+                    key={link.label}
+                    onClick={() => scrollToSection(link.href)}
+                    className="block w-full text-left px-4 py-3 text-slate-300 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
+                  >
+                    {link.label}
+                  </button>
+                ))}
+                <div className="pt-4 border-t border-slate-800 space-y-3">
+                  <Button
+                    variant="ghost"
+                    className="w-full justify-center text-slate-300"
+                  >
+                    Sign In
+                  </Button>
+                  <Button className="w-full bg-gradient-to-r from-violet-600 to-violet-700 text-white">
+                    Get Started
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </>
+  );
+}

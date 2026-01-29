@@ -46,6 +46,7 @@ module.exports = {
       },
       fontFamily: {
         sans: ['Inter', 'sans-serif'],
+        hero: ['Orbitron', 'sans-serif'], // <-- add this line
       },
       boxShadow: {
         'card': '0 10px 30px -15px rgba(2, 12, 27, 0.7)',
