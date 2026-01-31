@@ -317,8 +317,10 @@ fn test_resolve_dispute_tie_splits_funds() {
     let contract_id = register_and_init_contract(&env);
     let client = StellarGuildsContractClient::new(&env, &contract_id);
 
-    let (guild_id, owner, admin, member, contributor) =
+    let (guild_id, owner, _admin, member, contributor) =
         setup_guild_with_members(&client, &env);
+    let member2 = Address::generate(&env);
+    client.add_member(&guild_id, &member2, &Role::Member, &owner);
 
     let token = create_mock_token(&env, &owner);
     let bounty_id = create_funded_bounty(&client, &env, guild_id, &owner, &owner, &token);
