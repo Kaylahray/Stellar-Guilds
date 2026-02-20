@@ -15,6 +15,14 @@ export { cn } from '@/lib/utils'
 // Mock Data
 export { mockGuilds, mockBounties, mockProfiles, generateRandomGuild, generateRandomBounty } from '@/lib/mocks'
 
+// Wallet Components
+export { WalletConnectButton, WalletModal, TransactionConfirmation, WalletNotInstalled } from './WalletConnector'
+
+// Hooks
+export { useWallet } from '@/hooks/useWallet'
+export { useWalletModal } from '@/hooks/useWalletModal'
+
 // Stores
 export { useSidebarStore } from '@/store/sidebarStore'
 export { useThemeStore } from '@/store/themeStore'
+export { useWalletStore } from '@/store/walletStore'
