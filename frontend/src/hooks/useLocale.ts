@@ -1,5 +1,5 @@
 import { useLocale as useNextLocale } from 'next-intl';
-import { isRtlLocale } from '@/lib/i18n/config';
+import { isRtlLocale } from '@/i18n';
 
 export function useLocale() {
   const locale = useNextLocale();

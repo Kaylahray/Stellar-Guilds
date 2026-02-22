@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import { ChevronDown, Languages } from 'lucide-react';
-import { locales, type Locale } from '@/lib/i18n/config';
+import { locales, type Locale } from '@/i18n';
 import { Button } from '@/components/ui/Button';
 import {
   DropdownMenu,

@@ -1,4 +1,4 @@
-import { Locale, isRtlLocale } from './config';
+import { Locale, isRtlLocale } from '@/i18n';
 
 /**
  * Gets the HTML direction attribute based on the locale

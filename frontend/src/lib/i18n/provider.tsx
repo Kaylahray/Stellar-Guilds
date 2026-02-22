@@ -4,7 +4,7 @@ import { ReactNode } from 'react';
 import { NextIntlClientProvider } from 'next-intl';
 import { useLocale } from 'next-intl';
 import { getDirection } from './utils';
-import { Locale } from './config';
+import { Locale } from '@/i18n';
 
 interface I18nProviderProps {
   children: ReactNode;

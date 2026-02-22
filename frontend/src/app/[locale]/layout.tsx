@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
-import "../../globals.css";
+import "../globals.css";
 import { getMessages } from 'next-intl/server';
 import { NextIntlClientProvider } from 'next-intl';
 import { notFound } from 'next/navigation';
-import { locales, defaultLocale } from '@/lib/i18n/config';
+import { locales, defaultLocale } from '@/i18n';
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -18,10 +18,12 @@ export default async function LocaleLayout({
   params,
 }: Readonly<{
   children: React.ReactNode;
-  params: { locale: string };
+  params: Promise<{ locale: string }>;
 }>) {
+  const { locale } = await params;
+  
   // Validate that the incoming locale is supported
-  if (!locales.includes(params.locale as any)) {
+  if (!locales.includes(locale as any)) {
     notFound();
   }
 
@@ -29,9 +31,9 @@ export default async function LocaleLayout({
   const messages = await getMessages();
 
   return (
-    <html lang={params.locale} dir={params.locale === 'ar' || params.locale === 'he' ? 'rtl' : 'ltr'} className="dark">
+    <html lang={locale} dir={locale === 'ar' || locale === 'he' ? 'rtl' : 'ltr'} className="dark">
       <body className={inter.className}>
-        <NextIntlClientProvider locale={params.locale} messages={messages}>
+        <NextIntlClientProvider locale={locale} messages={messages}>
           <div className="min-h-screen bg-stellar-navy text-stellar-white font-sans">
             {children}
           </div>
