@@ -1,3 +1,5 @@
+"use client";
+
 import React from "react";
 import { mockMessages } from "@/features/social/mockData";
 import { ChatWindow } from "@/components/Messaging/ChatWindow";
