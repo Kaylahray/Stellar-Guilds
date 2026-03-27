@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-const Navbar = () => {
+export const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
 
   const navLinks = [
@@ -75,4 +75,3 @@ const Navbar = () => {
   );
 };
 
-export default Navbar;
