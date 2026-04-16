@@ -164,6 +164,7 @@ model Bounty {
   creatorId    String
   assigneeId   String?
   guildId      String?
+  reminderSent Boolean   @default(false)
 
   // Relations
   creator      User                @relation("UserCreatedBounties", fields: [creatorId], references: [id])
