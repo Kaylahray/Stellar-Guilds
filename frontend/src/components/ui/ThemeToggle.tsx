@@ -36,7 +36,7 @@ export function ThemeToggle() {
       aria-label={`Current theme: ${current}. Switch to ${next}`}
       className="p-2 rounded-md hover:bg-gray-200 dark:hover:bg-stellar-lightNavy transition-colors"
     >
-      <div className={`transition-transform duration-300 ${isRotating ? 'rotate-180' : ''}`}>
+      <div className={`transition-transform duration-300 text-gray-900 dark:text-white ${isRotating ? 'rotate-180' : ''}`}>
         {icons[current]}
       </div>
     </button>
