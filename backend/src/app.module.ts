@@ -13,6 +13,8 @@ import { APP_GUARD } from '@nestjs/core';
 import { HealthModule } from './health/health.module';
 import { LoggerModule } from './logger/logger.module';
 import { QueueModule } from './queue/queue.module';
+import { ProxylModule } from './proxyl/proxyl.module';
+import { ReputationModule } from './reputation/reputation.module';
 import { ErrorReportingModule } from './common/modules/error-reporting.module';
 
 @Module({
@@ -36,6 +38,8 @@ import { ErrorReportingModule } from './common/modules/error-reporting.module';
     SocialModule,
     HealthModule,
     QueueModule,
+    ProxylModule,
+    ReputationModule,
   ],
   controllers: [AppController],
   providers: [
