@@ -25,7 +25,7 @@ import { UpdateGuildDto } from './dto/update-guild.dto';
 import { InviteMemberDto } from './dto/invite-member.dto';
 import { ApproveInviteDto } from './dto/approve-invite.dto';
 import { SearchGuildDto } from './dto/search-guild.dto';
-import { GuildDetailsDto } from './dto/guild-details.dto';
+import { UpdateGuildMembershipDto } from './dto/update-guild-membership.dto';
 import { validateImageFile } from '../common/utils/file-upload.validator';
 import {
   ApiTags,
@@ -336,5 +336,18 @@ export class GuildController {
       req.user.userId,
       file.buffer,
     );
+  }
+
+  /**
+   * Update the current user's guild membership bio
+   */
+  @UseGuards(JwtAuthGuard)
+  @Patch(':guildId/members/me')
+  async updateMyMembership(
+    @Param('guildId') guildId: string,
+    @Body() dto: UpdateGuildMembershipDto,
+    @Request() req: any,
+  ) {
+    return this.guildService.updateMembership(req.user.userId, guildId, dto);
   }
 }

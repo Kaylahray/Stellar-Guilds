@@ -145,6 +145,7 @@ model GuildMembership {
   invitedById         String?
   invitationExpiresAt DateTime?
   role                GuildRole        @default(MEMBER)
+  bio                 String?
   userId              String
   guildId             String
 

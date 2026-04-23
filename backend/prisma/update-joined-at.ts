@@ -5,19 +5,28 @@ const prisma = new PrismaClient();
 async function updateJoinedAt() {
   console.log('Starting joinedAt update...');
 
-  const result = await prisma.guildMembership.updateMany({
+  // Get all memberships with null joinedAt
+  const memberships = await prisma.guildMembership.findMany({
     where: {
       joinedAt: null,
     },
-    data: {
-      joinedAt: new Date(), // This will be set to createdAt in a proper migration, but for script, use current time or query each
+    select: {
+      id: true,
+      createdAt: true,
     },
   });
 
-  console.log(`Updated ${result.count} records`);
+  console.log(`Found ${memberships.length} records to update`);
 
-  // Actually, to set to createdAt, we need to do it one by one or use raw SQL
-  // For simplicity, since it's one-off, and new records get now(), existing null get now() as approximation
+  // Update each one
+  for (const membership of memberships) {
+    await prisma.guildMembership.update({
+      where: { id: membership.id },
+      data: { joinedAt: membership.createdAt },
+    });
+  }
+
+  console.log('Update completed');
 
   await prisma.$disconnect();
 }
